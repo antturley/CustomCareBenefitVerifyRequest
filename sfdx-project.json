@@ -6,7 +6,7 @@
     }
   ],
   "name": "CustomCareBenefitVerifyRequest",
-  "namespace": "",
+  "namespace": "CBVR",
   "sfdcLoginUrl": "https://login.salesforce.com",
   "sourceApiVersion": "62.0"
 }
