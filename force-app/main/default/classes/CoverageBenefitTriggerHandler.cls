@@ -7,6 +7,7 @@ public class CoverageBenefitTriggerHandler {
                 memberPlanIds.add(cb.MemberPlanId);
             }
             //Would normally come from another object but out of scope for this demo app
+            //Create Custom Coverage benefit item record instead of dummy data
             cb.OutofNetworkLifetimeMaximum = 1000;
             cb.OutofNetworkCoinsurancePercentage = 10;
             cb.OutofNetworkCoinsuranceAmount = 2000;
