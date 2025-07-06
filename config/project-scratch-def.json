@@ -10,7 +10,8 @@
     "API",
     "Communities",
     "SalesUser",
-    "PersonAccounts"],
+    "PersonAccounts"
+    ],
   "settings": {
     "lightningExperienceSettings": {
       "enableS1DesktopEnabled": true

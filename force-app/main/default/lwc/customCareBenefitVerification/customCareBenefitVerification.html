@@ -1,0 +1,56 @@
+<template>
+     <div class="container">
+    <!-- Available Plans Section -->
+    <section class="plans-section">
+      <h2>Available Plans</h2>
+      <div class="plan-details">
+        <p>{memberName} -- Member Plan</p>
+        <p>Member Number: {memberNumber}</p>
+        <p>Group Number: {groupNumber}</p>
+        <p>Effective from: {effectiveDate}</p>
+        <p>Plan Type: {planType}</p>
+        <p>Relationship to Subscriber: {relationship}</p>
+      </div>
+    </section>
+
+    <!-- Verification Panel -->
+    <section class="verification-section">
+      <h2>{memberName} -- Member Plan</h2>
+      <div class="tabs">
+        <button onclick={showPlanLevelBenefits}>Plan Level Benefits</button>
+        <button onclick={showCoverageBenefitDetails}>Coverage Benefit Details</button>
+      </div>
+
+      <template if:true={showVerifyButton}>
+        <div class="verify-prompt">
+          <p>Verify Benefits</p>
+          <p>Click the "Verify Benefits" button to run a benefits verification.</p>
+          <button onclick={handleVerify}>Verify Benefits</button>
+        </div>
+      </template>
+
+      <template if:true={showSuccessfulDetails}>
+        <div class="verification-success">
+          <h3>Last Successful Verification</h3>
+          <p>Service Date: {lastSuccessful.serviceDate}</p>
+          <p>Plan Name: {lastSuccessful.planName}</p>
+          <p>Coverage End: {lastSuccessful.coverageEndDate}</p>
+          <!-- Add more fields as needed -->
+        </div>
+      </template>
+
+      <template if:true={showRequestDropdown}>
+        <div class="verification-history">
+          <label for="request-select">Select Previous Request</label>
+          <select id="request-select" onchange={handleSelect}>
+            <template for:each={recentRequests} for:item="req">
+              <option key={req.id} value={req.id}>
+                {req.status} — {req.serviceDate}
+              </option>
+            </template>
+          </select>
+        </div>
+      </template>
+    </section>
+  </div>
+</template>

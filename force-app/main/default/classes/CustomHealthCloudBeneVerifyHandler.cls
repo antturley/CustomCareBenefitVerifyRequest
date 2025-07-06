@@ -1,11 +1,14 @@
-global class HealthCloudBenefitVerificationHandler implements healthcloudext.IBenefitsVerificationInterOp  {
-
+public with sharing class CustomHealthCloudBeneVerifyHandler {
     /**
      * @description: Method required for Benefit Verification Component provided by Salesforce.
-     * @param: List<healthcloudext.BenefitsVerificationRequest>
-     * @return: List<healthcloudext.BenefitsVerificationResponse>
+     * @param: 
+     * @return: 
      */
-    global static List<healthcloudext.BenefitsVerificationResponse> verifyBenefits(List<healthcloudext.BenefitsVerificationRequest> requests) {
+
+     //Decide if I want it global or public later. 
+     //Keep the return type just becuase it has a model built already for the comp.
+     @AuraEnabled
+     public static List<healthcloudext.BenefitsVerificationResponse> verifyBenefits(List<healthcloudext.BenefitsVerificationRequest> requests) {
         Account providerAcct;
         HealthcareProvider providerHcp;
 
@@ -113,10 +116,18 @@ global class HealthCloudBenefitVerificationHandler implements healthcloudext.IBe
                 hres.memberNumber = memPlan.MemberNumber;
                 responses.add(hres);
             }
-            
         }
 
         return responses;
     }
 
+    @AuraEnabled
+    public static string getMemberPlans(){
+        
+        try {
+            
+        } catch (Exception e) {
+            throw new AuraHandledException(e.getMessage());
+        }
+    }
 }
