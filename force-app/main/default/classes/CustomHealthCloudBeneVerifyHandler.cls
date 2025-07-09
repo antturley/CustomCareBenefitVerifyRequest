@@ -32,25 +32,7 @@ public with sharing class CustomHealthCloudBeneVerifyHandler {
         BenefitVerificationRequest req = new BenefitVerificationRequest();
 
         //Assumse only one meember plan
-        List<MemberPlan> memPlans = [
-            SELECT Member.PersonGender
-                ,   Member.FirstName
-                ,   Member.LastName
-                ,   Member.PersonBirthdate
-                ,   MemberNumber
-                ,   SubscriberId
-                ,   Policy_Number__c
-                ,   PayerId
-                ,   Payer.Name
-                ,   Provider__c
-                ,   Service_Detail__c
-                ,   Service_Detail__r.Service_Type__c
-                ,   Service_Detail__r.Service_Date__c
-                ,   Service_Detail__r.Procedure_Code__c
-                ,   Service_Detail__r.Diagnosis_Code__c
-                ,   GroupNumber
-            FROM MemberPlan 
-            WHERE MemberId = : requestMemberIds];
+        List<MemberPlan> memPlans = getMemberPlans(requestMemberIds);
 
         //Process each request
         for (MemberPlan memPlan : memPlans) {
@@ -120,14 +102,166 @@ public with sharing class CustomHealthCloudBeneVerifyHandler {
 
         return responses;
     }
+    @AuraEnabled
+    public static List<MemberPlan> getMemberPlans(List<Id> requestMemberIds){
+        return [
+            SELECT Member.PersonGender
+                ,   Member.FirstName
+                ,   Member.LastName
+                ,   Member.PersonBirthdate
+                ,   MemberNumber
+                ,   SubscriberId
+                ,   Policy_Number__c
+                ,   PayerId
+                ,   Payer.Name
+                ,   Provider__c
+                ,   Service_Detail__c
+                ,   Service_Detail__r.Service_Type__c
+                ,   Service_Detail__r.Service_Date__c
+                ,   Service_Detail__r.Procedure_Code__c
+                ,   Service_Detail__r.Diagnosis_Code__c
+                ,   GroupNumber
+                ,   RelationshipToSubscriber
+                ,   LastVerification
+            FROM MemberPlan 
+            WHERE MemberId = : requestMemberIds];
+    }
 
     @AuraEnabled
-    public static string getMemberPlans(){
-        
-        try {
-            
-        } catch (Exception e) {
-            throw new AuraHandledException(e.getMessage());
-        }
+    public static List<CoverageBenefit> getCoverageBenefitDetails(List<Id> MemberPlanIds, List<Id> CareBenefitVerifyRequestIds ){
+        List<CoverageBenefit> covBens = [
+        SELECT Id
+        ,   BenefitNotes
+        ,   BenefitPeriodEndDate
+        ,   BenefitPeriodStartDate
+        ,   CareBenefitVerifyRequestId
+        ,   CoverageType
+        ,   EmergencyDepartmentCopay
+        ,   FamilyInNetworkDeductibleApplied
+        ,   FamilyInNetworkDeductibleLimit
+        ,   FamilyInNetworkDeductibleRemaining
+        ,   FamilyInNetworkOutofPocketApplied
+        ,   FamilyInNetworkOutofPocketLimit
+        ,   FamilyInNetworkOutofPocketRemaining
+        ,   FamilyOutofNetworkDeductibleApplied
+        ,   FamilyOutofNetworkDeductibleLimit
+        ,   FamilyOutofNetworkDeductibleRemaining
+        ,   FamilyOutofNetworkOutofPocketApplied
+        ,   FamilyOutofNetworkOutofPocketLimit
+        ,   FamilyOutofNetworkOutofPocketRemaining
+        ,   InNetworkCoinsuranceAmount
+        ,   InNetworkCoinsurancePercentage
+        ,   InNetworkLifetimeMaximum
+        ,   IndividualInNetworkDeductibleApplied
+        ,   IndividualInNetworkDeductibleLimit
+        ,   IndividualInNetworkDeductibleRemaining
+        ,   IndividualInNetworkOutofPocketApplied
+        ,   IndividualInNetworkOutofPocketLimit
+        ,   IndividualInNetworkOutofPocketRemaining
+        ,   IndividualOutofNetworkDeductibleApplied
+        ,   IndividualOutofNetworkDeductibleLimit
+        ,   IndividualOutofNetworkDeductibleRemain
+        ,   IndividualOutofNetworkOutofPocketApplied
+        ,   IndividualOutofNetworkOutofPocketLimit
+        ,   IndividualOutofNetworkOutofPocketRemain
+        ,   MemberId
+        ,   MemberPlanId
+        ,   OutofNetworkCoinsuranceAmount
+        ,   OutofNetworkCoinsurancePercentage
+        ,   OutofNetworkLifetimeMaximum
+        ,   PharmaCopayAmount
+        ,   PrimaryCareCopay
+        ,   SpecialistCopay
+        ,   UrgentCareCopay	
+         FROM CoverageBenefit 
+         WHERE isActive = true
+         AND MemberPlanId =: MemberPlanIds
+         AND CareBenefitVerifyRequestId =: CareBenefitVerifyRequestIds 
+         LIMIT 1];
+        return covBens;
+    }
+
+    @AuraEnabled
+    public static List<CoverageBenefitItem> getCoverageBenefitItem(List<Id> CoverageBenefitIds, List<Id> MemberIds){
+       List<CoverageBenefitItem> cbi = [SELECT Id
+        ,   IsActive
+        ,   BenefitCategory
+        ,   ServiceType
+        ,   ServiceTypeCode
+        ,   CoverageBenefitId
+        FROM CoverageBenefitItem
+        WHERE CoverageBenefitId =: CoverageBenefitIds
+        AND MemberId =: MemberIds
+        AND IsActive = true];
+        return cbi;
+    }
+
+
+
+    @AuraEnabled
+    public static List<CoverageBenefitItemLimit> getCoverageBenefitItemLimit (List<Id> CoverageBenefitItemIds){
+        List<CoverageBenefitItemLimit> cbItemLimits = [SELECT 
+            Id
+        ,   CareLimitTypeId 
+        ,   AllowedLimit
+        ,   AppliedLimit
+        ,   TermType
+        ,   NetworkType
+        ,   CoverageLevel
+        ,   CoverageBenefitItemId
+        FROM CoverageBenefitItemLimit
+        WHERE CoverageBenefitItemId =: CoverageBenefitItemIds
+        ];
+        return cbItemLimits;
+    }
+
+    @AuraEnabled
+    public static List<CoverageBenefitItem> getPlanLevelBenefits(List<Id> requestMemberIds){
+        System.debug('Request Ids sent from client: ' + requestMemberIds);
+       
+        return [SELECT 
+          Id 
+        , IsActive
+        , BenefitCategory
+        , CodeSetServiceTypeId
+        , CoverageBenefitId
+        , CoverageLevel
+        , InNetworkCoverage
+        , DoesDeductibleApply
+        , IsInPlanNetwork
+        , MemberId
+        , Name
+        , Notes
+        , OutofNetworkCoverage
+        , IsPreauthorizationRequired
+        , ServiceType
+        , ServiceTypeCode
+        , TimePeriod
+        FROM CoverageBenefitItem
+        WHERE IsActive = true
+         AND MemberId =: requestMemberIds
+        ];
+    }
+
+    @AuraEnabled
+    public static List<CareBenefitVerifyRequest> getCBVR(List<Id> memberPlanIds){
+         List<CareBenefitVerifyRequest> cbvRecords = [
+            SELECT Id
+            , Name
+            , CoverageBenefitId
+            , PayerId
+            , PlanId
+            , ProviderId
+            , RequestDate
+            , Status
+            , MemberPlanId
+            , StatusReason 
+            FROM CareBenefitVerifyRequest 
+            WHERE MemberPlanId =: memberPlanIds 
+            ORDER BY CreatedDate ASC
+        ];
+        system.debug('CBVR Records: ' + cbvRecords.size());
+        return cbvRecords;
+       
     }
 }
