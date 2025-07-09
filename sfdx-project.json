@@ -1,12 +1,19 @@
 {
   "packageDirectories": [
     {
+      "versionName": "ver 0.1",
+      "versionNumber": "0.1.0.NEXT",
       "path": "force-app",
-      "default": true
+      "default": true,
+      "package": "Custom Care Benefit Verification App",
+      "versionDescription": "Custom Salesforce Application to create CareBenefitVerifyRequest records in Salesforce."
     }
   ],
   "name": "CustomCareBenefitVerifyRequest",
-  "namespace": "",
+  "namespace": "CBVR",
   "sfdcLoginUrl": "https://login.salesforce.com",
-  "sourceApiVersion": "62.0"
+  "sourceApiVersion": "62.0",
+  "packageAliases": {
+    "Custom Care Benefit Verification App": "0HogL0000000HnFSAU"
+  }
 }
