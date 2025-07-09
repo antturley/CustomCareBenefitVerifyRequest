@@ -183,16 +183,18 @@ public with sharing class CustomHealthCloudBeneVerifyHandler {
 
     @AuraEnabled
     public static List<CoverageBenefitItem> getCoverageBenefitItem(List<Id> CoverageBenefitIds, List<Id> MemberIds){
-       List<CoverageBenefitItem> cbi = [SELECT Id
-        ,   IsActive
-        ,   BenefitCategory
-        ,   ServiceType
-        ,   ServiceTypeCode
-        ,   CoverageBenefitId
-        FROM CoverageBenefitItem
-        WHERE CoverageBenefitId =: CoverageBenefitIds
-        AND MemberId =: MemberIds
-        AND IsActive = true];
+        system.debug('Coverage BenefitIds: '+ CoverageBenefitIds);
+        system.debug('MemberIds: '+ MemberIds);
+        List<CoverageBenefitItem> cbi = [SELECT Id
+            ,   IsActive
+            ,   BenefitCategory
+            ,   ServiceType
+            ,   ServiceTypeCode
+            ,   CoverageBenefitId
+            FROM CoverageBenefitItem
+            WHERE CoverageBenefitId =: CoverageBenefitIds
+            AND MemberId =: MemberIds
+            AND IsActive = true];
         return cbi;
     }
 
@@ -200,6 +202,8 @@ public with sharing class CustomHealthCloudBeneVerifyHandler {
 
     @AuraEnabled
     public static List<CoverageBenefitItemLimit> getCoverageBenefitItemLimit (List<Id> CoverageBenefitItemIds){
+        system.debug('Coverage Benefit Item Limit Id: '+ CoverageBenefitItemIds );
+        
         List<CoverageBenefitItemLimit> cbItemLimits = [SELECT 
             Id
         ,   CareLimitTypeId 
@@ -258,7 +262,7 @@ public with sharing class CustomHealthCloudBeneVerifyHandler {
             , StatusReason 
             FROM CareBenefitVerifyRequest 
             WHERE MemberPlanId =: memberPlanIds 
-            ORDER BY CreatedDate ASC
+            ORDER BY CreatedDate DESC
         ];
         system.debug('CBVR Records: ' + cbvRecords.size());
         return cbvRecords;

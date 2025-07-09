@@ -63,7 +63,7 @@
                 <!--onchange={handleSelect}-->
                 <template for:each={cbvRecords} for:item="rec">
                   <option key={rec.Id} value={rec.Id}>
-                    {rec.Status} — {rec.RequestDate} - Verfication Request
+                    {rec.Name} - {rec.Status} — {rec.RequestDate} - Verfication Request
                   </option>
                 </template>
               </select>
@@ -196,22 +196,29 @@
                 </lightning-tab>
                 <lightning-tab label="Coverage Benefit Details">
                    <label for="request-select" class="slds-form-element__label">Please select a category to view benefit details</label>
-                  <select id="item-request-select" class="slds-select" >
+                  <select id="item-request-select" class="slds-select" onchange={handleItemChange} >
                     <!--onload={handleLoad} onchange={handleChange} add back later-->
-                    <template for:each={cbvRecords} for:item="rec">
+                    <template for:each={coverageBenefitItems} for:item="rec">
                       <option key={rec.Id} value={rec.Id}>
-                        {rec.Status} — {rec.RequestDate} - Verfication Request
+                        {rec.BenefitCategory}
                       </option>
                     </template>
-                     <lightning-accordion allow-multiple-sections-open
-                         onsectiontoggle={handleSectionToggle}
-                         active-section-name={activeSections}>
-                        <lightning-accordion-section name="Coverage Benefit Details" label="Coverage Benefit Details">
-                            <p>This is the content area for section A.</p>
-                            <p>Donec vitae tellus egestas, faucibus ipsum ac, imperdiet erat. Nam venenatis non ante at sagittis. Integer vel purus eget nunc semper placerat. Nam tristique quam leo, et posuere enim condimentum quis. Ut sagittis libero id lectus tempor maximus. Nunc ut tincidunt eros, a hendrerit leo. Suspendisse quis fermentum dolor. Nulla euismod consectetur leo, id condimentum nunc consequat quis.</p>
+                  </select>
+                  <lightning-accordion allow-multiple-sections-open class="slds-m-top_small"
+                         active-section-name="Coverage Benefit Details">
+                        <lightning-accordion-section name="Coverage Benefit Details" label={selectedItemName} >
+                            <lightning-datatable
+                                  key-field="id"
+                                  columns={columns}
+                                  data={coverageBenefitItemsLimit}
+                                  hide-checkbox-column
+                                  default-sort-direction={defaultSortDirection}
+                                  sorted-direction={sortDirection}
+                                  sorted-by={sortedBy}
+                                  onsort={onHandleSort}>
+                            </lightning-datatable>
                         </lightning-accordion-section>
                       </lightning-accordion>
-                  </select>
                 </lightning-tab>
               </lightning-tabset>
 

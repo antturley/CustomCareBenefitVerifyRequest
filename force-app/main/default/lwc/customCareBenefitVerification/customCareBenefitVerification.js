@@ -7,11 +7,42 @@ import getCoverageBenefitItem from '@salesforce/apex/CustomHealthCloudBeneVerify
 import getCoverageBenefitItemLimit from '@salesforce/apex/CustomHealthCloudBeneVerifyHandler.getCoverageBenefitItemLimit';
 import { CurrentPageReference } from 'lightning/navigation';
 
+const columns = [
+    { label: 'Limit Type', fieldName: 'CareLimitType.Name' },
+    {
+        label: 'Allowed Limit',
+        fieldName: 'AllowedLimit',
+        type: 'number',
+        sortable: true,
+        cellAttributes: { alignment: 'left' }
+    },
+    {
+        label: 'Applied Limit',
+        fieldName: 'AppliedLimit',
+        type: 'number',
+        sortable: true,
+        cellAttributes: { alignment: 'left' }
+    },
+    { 
+        label: 'Term Type', 
+        fieldName: 'TermType', 
+        sortable: true,
+        cellAttributes: { alignment: 'left' } 
+    },
+    {
+      label: 'Network Type',
+      fieldName: 'NetworkType',
+      sortable: true,
+      cellAttributes: { alignment: 'left' }
+    }
 
+];
 
 export default class CustomCareBenefitVerification extends LightningElement {
   //get account id from console tab
   @api recordId;
+
+  columns = columns
 
   showMemPlan = false;
   showCovBenefit = false;
@@ -35,14 +66,14 @@ export default class CustomCareBenefitVerification extends LightningElement {
   @track selectedCBVRecord = [];
   @track coverageBenefits = [];
   @track coverageBenefitItems = [];
+  @track selectedCoverageBenefitItem = [];
   @track coverageBenefitItemsLimit = [];
   @track memberPlans = [];
-  
-  
-  //Request to be built
-  request = [];
 
-  // add call to get all this data from backend - Member/Member Plan - prob from class - HealthCloudBenefitVerificationHandler.cls
+  columns = columns;
+  defaultSortDirection = 'asc';
+  sortDirection = 'asc';
+  sortedBy;
 
   @wire(CurrentPageReference)
   pageRef(pageRef) {
@@ -61,9 +92,7 @@ export default class CustomCareBenefitVerification extends LightningElement {
   }
 
   connectedCallback() {
-    
     this.showMemberPlans();
-    
   }
 
   showMemberPlans() {
@@ -112,11 +141,10 @@ showCBVRecords(){
         this.cbvRecords = undefined;
       })
       .finally(() => {
+        this.showCoverageBenefitDetails()
         this.isLoading = false;
       });
   
-  
-  //this.showCoverageBenefitItemLimit();
 }
 
 showCoverageBenefitDetails() {
@@ -127,25 +155,28 @@ showCoverageBenefitDetails() {
         this.error = undefined;
         this.showCovBenefit = true;
         console.log('getCoverageBenefits Promise: ' + JSON.stringify(result));
-        
       })
       .catch((err) => {
         this.error = err;
         this.coverageBenefits = undefined;
       })
       .finally(() => {
+        this.createPercentages();
+        this.showCoverageBenefitItem();
         this.isLoading = false;
       });
 
-      
   }
 
   showCoverageBenefitItem(){
-    getCoverageBenefitItem({ CoverageBenefitIds:  this.coverageBenefits[0].Id}, { MemberIds:   this.selectedMemberPlan.Id })
+    console.log('this.coverageBenefits[0].Id => ' + this.coverageBenefits[0].Id + ' this.selectedMemberPlan.Id => ' + this.selectedMemberPlan.Id);
+    getCoverageBenefitItem({ CoverageBenefitIds:  [this.coverageBenefits[0].Id], MemberIds:   [this.selectedMemberPlan.MemberId]})
       .then((result) => {
         this.coverageBenefitItems = result;
         this.error = undefined;
         this.showCovBenefitItem = true;
+        this.selectedCoverageBenefitItem = this.coverageBenefitItems[0];
+        this.selectedItemName = this.coverageBenefitItems[0].ServiceType + ': ' + this.coverageBenefitItems[0].ServiceTypeCode; 
         console.log('Coverage Benefit Items Promise: ' + JSON.stringify(result));
       })
       .catch((err) => {
@@ -153,12 +184,15 @@ showCoverageBenefitDetails() {
         this.coverageBenefitItems = undefined;
       })
       .finally(() => {
+         
+        this.showCoverageBenefitItemLimit();
         this.isLoading = false;
       });
   }
 
   showCoverageBenefitItemLimit(){
-    getCoverageBenefitItemLimit({ CoverageBenefitItemIds:  this.coverageBenefits[0].Id})
+    if(this.selectedCoverageBenefitItem != null){
+      getCoverageBenefitItemLimit({ CoverageBenefitItemIds:  this.selectedCoverageBenefitItem.Id})
       .then((result) => {
         this.coverageBenefitItemsLimit = result;
         this.error = undefined;
@@ -172,6 +206,9 @@ showCoverageBenefitDetails() {
       .finally(() => {
         this.isLoading = false;
       });
+    }else{
+      this.coverageBenefitItemsLimit = [];
+    }
   }
 
 
@@ -192,14 +229,23 @@ showCoverageBenefitDetails() {
       this.selectedCBVRecord = this.cbvRecords.find(record => record.Id === selectedId);
       try {
         this.showCoverageBenefitDetails();
+        this.createPercentages();
       } catch (error) {
         console.log('Error: ' + error);
       }
-      
       //fix later
       //this.truncatedDate = this.truncateDate(this.selectedMemberPlan.RequestDate);
     }
   }
+
+  handleItemChange(event){
+    let selectedId = event.target.value;
+    if (selectedId) {
+      this.selectedCoverageBenefitItem = this.coverageBenefitItems.find(record => record.Id === selectedId);
+      this.selectedItemName = this.selectedCoverageBenefitItem.ServiceType + ': ' + this.selectedCoverageBenefitItem.ServiceTypeCode;
+    }
+  }
+
 
   handleSelect(event) {
     const selectedId = event.target.value;
@@ -259,4 +305,29 @@ showCoverageBenefitDetails() {
     }
   }
 
+   sortBy(field, reverse, primer) {
+        const key = primer
+            ? function (x) {
+                  return primer(x[field]);
+              }
+            : function (x) {
+                  return x[field];
+              };
+
+        return function (a, b) {
+            a = key(a);
+            b = key(b);
+            return reverse * ((a > b) - (b > a));
+        };
+    }
+
+    onHandleSort(event) {
+        const { fieldName: sortedBy, sortDirection } = event.detail;
+        const cloneData = [...this.data];
+
+        cloneData.sort(this.sortBy(sortedBy, sortDirection === 'asc' ? 1 : -1));
+        this.data = cloneData;
+        this.sortDirection = sortDirection;
+        this.sortedBy = sortedBy;
+    }
 }
