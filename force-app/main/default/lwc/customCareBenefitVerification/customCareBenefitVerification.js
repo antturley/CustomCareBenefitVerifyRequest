@@ -1,5 +1,5 @@
 import { LightningElement, api, track, wire } from 'lwc';
-import verifyBenefits from '@salesforce/apex/CustomHealthCloudBeneVerifyHandler.verifyBenefits';
+import verifyMemberPlanBenefits from '@salesforce/apex/CustomHealthCloudBeneVerifyHandler.verifyBenefits';
 import getMemberPlans from '@salesforce/apex/CustomHealthCloudBeneVerifyHandler.getMemberPlans';
 import getCoverageBenefits from '@salesforce/apex/CustomHealthCloudBeneVerifyHandler.getCoverageBenefitDetails';
 import getCBVRecord from '@salesforce/apex/CustomHealthCloudBeneVerifyHandler.getCBVR';
@@ -50,6 +50,7 @@ export default class CustomCareBenefitVerification extends LightningElement {
   displayVerificationSection = false;
   showCovBenefitItem = false;
   showCovBenefitItemLimit = false;
+  isLoading = false;
 
   truncatedDate;
   individualInNetworkOutofPocketApplied;
@@ -69,6 +70,8 @@ export default class CustomCareBenefitVerification extends LightningElement {
   @track selectedCoverageBenefitItem = [];
   @track coverageBenefitItemsLimit = [];
   @track memberPlans = [];
+
+  verificationResults = [];
 
   columns = columns;
   defaultSortDirection = 'asc';
@@ -132,9 +135,6 @@ showCBVRecords(){
         this.selectedCBVRecord = this.cbvRecords[0];
         this.error = undefined;
         this.cbvrExist = true;
-        
-        console.log('getCBVRecord Promise: ' + JSON.stringify(result));
-        
       })
       .catch((err) => {
         this.error = err;
@@ -148,13 +148,11 @@ showCBVRecords(){
 }
 
 showCoverageBenefitDetails() {
-    console.log('rec id on click:  ' + this.selectedMemberPlan.Id + ' Selected CBV: ' +  this.selectedCBVRecord.Id);
     getCoverageBenefits({ MemberPlanIds: [this.selectedMemberPlan.Id], CareBenefitVerifyRequestIds:  [this.selectedCBVRecord.Id]  })
       .then((result) => {
         this.coverageBenefits = result;
         this.error = undefined;
         this.showCovBenefit = true;
-        console.log('getCoverageBenefits Promise: ' + JSON.stringify(result));
       })
       .catch((err) => {
         this.error = err;
@@ -169,15 +167,14 @@ showCoverageBenefitDetails() {
   }
 
   showCoverageBenefitItem(){
-    console.log('this.coverageBenefits[0].Id => ' + this.coverageBenefits[0].Id + ' this.selectedMemberPlan.Id => ' + this.selectedMemberPlan.Id);
-    getCoverageBenefitItem({ CoverageBenefitIds:  [this.coverageBenefits[0].Id], MemberIds:   [this.selectedMemberPlan.MemberId]})
+   
+      getCoverageBenefitItem({ CoverageBenefitIds:  [this.coverageBenefits[0].Id], MemberIds:   [this.selectedMemberPlan.MemberId]})
       .then((result) => {
         this.coverageBenefitItems = result;
         this.error = undefined;
         this.showCovBenefitItem = true;
         this.selectedCoverageBenefitItem = this.coverageBenefitItems[0];
         this.selectedItemName = this.coverageBenefitItems[0].ServiceType + ': ' + this.coverageBenefitItems[0].ServiceTypeCode; 
-        console.log('Coverage Benefit Items Promise: ' + JSON.stringify(result));
       })
       .catch((err) => {
         this.error = err;
@@ -188,16 +185,18 @@ showCoverageBenefitDetails() {
         this.showCoverageBenefitItemLimit();
         this.isLoading = false;
       });
+    
+    
   }
 
   showCoverageBenefitItemLimit(){
     if(this.selectedCoverageBenefitItem != null){
+      this.isLoading = true;
       getCoverageBenefitItemLimit({ CoverageBenefitItemIds:  this.selectedCoverageBenefitItem.Id})
       .then((result) => {
         this.coverageBenefitItemsLimit = result;
         this.error = undefined;
         this.showCovBenefitItemLimit = true;
-        console.log('Coverage Benefit Items Limit Promise: ' + JSON.stringify(result));
       })
       .catch((err) => {
         this.error = err;
@@ -210,7 +209,6 @@ showCoverageBenefitDetails() {
       this.coverageBenefitItemsLimit = [];
     }
   }
-
 
   handleLoad(event) {
     console.log('handleLoad() called.');
@@ -233,8 +231,6 @@ showCoverageBenefitDetails() {
       } catch (error) {
         console.log('Error: ' + error);
       }
-      //fix later
-      //this.truncatedDate = this.truncateDate(this.selectedMemberPlan.RequestDate);
     }
   }
 
@@ -247,40 +243,27 @@ showCoverageBenefitDetails() {
   }
 
 
-  handleSelect(event) {
-    const selectedId = event.target.value;
-
-    try {
-      const response = verifyBenefits({ recordId });
-      // Process the response as needed
-    } catch (error) {
-      console.error('Error calling verifyBenefits:', error);
-    }
-    // display selected request details if needed
-    //make call to backend to get request details from 
-
-    /*
-      this.request = [{
-      "benefitsRequestId": "5008b00001ABC123", 
-      "encounterDate": "2024-07-01",
-      "groupNumber": "GRP987654",
-      "memberAccountId": "0018b00002XYZ789",
-      "memberNumber": "MEM123456",
-      "payerId": "60054",
-      "providerNpi": "1234567890",
-      "providerOrganizationName": "Sunrise Medical Group",
-      "providerType": "PrimaryCare",
-      "serviceTypeCodes": ["30", "98"]
-    }]
-    */
-  
-
+  handleVerification() {
+    this.isLoading = true;
+    verifyMemberPlanBenefits({MemberPlans: [this.selectedMemberPlan]})
+      .then((result) => {
+        this.verificationResults = result;
+        this.error = undefined;
+        console.log('Result object from Verification:  ' + JSON.stringify(result));
+      })
+      .catch((err) => {
+        this.error = err;
+        this.verificationResults = undefined;
+      })
+      .finally(() => {
+        this.showCBVRecords();
+        this.isLoading = false;
+      });
   }
 
   truncateDate(date){
     let dateString = date.toString();
     let trunDate = dateString.split('T')[0];
-    console.log('Trunked date: ' + trunDate);
     return trunDate;
   }
 

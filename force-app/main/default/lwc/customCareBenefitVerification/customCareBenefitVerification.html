@@ -1,14 +1,12 @@
 <template>
   <div class="slds-container">
-    Record Id: {recordId}
-
     <div class="slds-grid slds-gutters">
       <div class="slds-col slds-size_1-of-3">
         <!-- Available Plans Section -->
         <template if:true={showMemPlan}>
           <section class="slds-section plans-section">
             <div class="slds-col slds-text-title_bold slds-p-bottom_x-small">
-              <span class="slds-text-title_bold slds-p-bottom_x-small">Available Plans</span>
+              <h1 class="slds-text-title_bold slds-p-bottom_x-small">Available Plans</h1>
             </div>
             <template for:each={memberPlans} for:item="memberPlan">
               <li key={memberPlan.Id} class="slds-split-view__list-item" data-id={memberPlan.Id}
@@ -45,20 +43,26 @@
         </template>
       </div>
       <div class="slds-col slds-size_2-of-3">
+        <template if:true={isLoading}>
+          <lightning-spinner alternative-text="Loading" size="small"></lightning-spinner>
+        </template>
         <template if:true={selectedMemberPlan.Member}>
           <div class="slds-col slds-size_1-of-3">
             <span class="slds-text-heading_medium slds-p-right_x-small memberPlanName">
               {selectedMemberPlan.Member.FirstName} {selectedMemberPlan.Member.LastName} -- Member Plan
             </span>
-            <template if:true={selectedCBVRecord.RequestDate}><span class="slds-badge">Active Coverage as of:
-                {truncatedDate}</span></template>
+            <template if:true={selectedCBVRecord.RequestDate}><span class="slds-badge slds-m-top_small">Active Coverage
+                as of:
+                {selectedCBVRecord.RequestDate}</span></template>
           </div>
           <div class="slds-col slds-size_2-of-3">
-            <button class="slds-button slds-button_outline-brand">Verify Benefits</button>
+            <button class="slds-button slds-button_outline-brand slds-m-top_small" onclick={handleVerification}>Verify
+              Benefits</button>
           </div>
           <div class="slds-col slds-size_3-of-3">
             <template if:true={cbvrExist}>
-              <label for="request-select" class="slds-form-element__label">Select Previous Request</label>
+              <label for="request-select" class="slds-form-element__label slds-m-top_small">Select Previous
+                Request</label>
               <select id="request-select" class="slds-select" onload={handleLoad} onchange={handleChange}>
                 <!--onchange={handleSelect}-->
                 <template for:each={cbvRecords} for:item="rec">
@@ -75,7 +79,7 @@
                     </div>
 
                     <div class="slds-col"><span>Request Date</span><br>
-                      {truncatedDate}
+                      {selectedCBVRecord.RequestDate}
                     </div>
                     <div class="slds-col"><span>Status</span><br>
                       {selectedCBVRecord.Status}
@@ -95,55 +99,30 @@
                     <lightning-accordion allow-multiple-sections-open active-section-name="Out-Of-Pocket">
                       <lightning-accordion-section name="Out-Of-Pocket" label="Out-Of-Pocket"
                         style="background: #f5f2f2;">
+                        <h2>INDIVIDUAL</h2>
                         <div class="slds-grid slds-gutters_none">
-                          <h2>INDIVIDUAL</h2>
+
                           <div class="slds-col">
-                            <h3>In-Network Out-of-Pocket</h3><br>
-                             <lightning-progress-bar value={individualInNetworkOutofPocketPercentage} size="small"></lightning-progress-bar>
-                            <div class="slds-grid slds-gutters_none">
-                             
-                              <div class="slds-col">
-                                <template if:true={individualInNetworkOutofPocketApplied}>
-                                  
-                                  <p class="slds-text-align_left">${individualInNetworkOutofPocketApplied} of
-                                    ${individualInNetworkOutofPocketLimit} applied</p>
-                                </template>
-                              </div>
-                              <div class="slds-col">
-                                <template if:true={individualInNetworkOutofPocketRemaining}>
-                                  <p class="slds-text-align_right">
-                                    ${individualInNetworkOutofPocketRemaining} remaining
-                                  </p>
-                                </template>
-                              </div>
+                            <div class="container">
+                              <h3>In-Network Out-of-Pocket</h3>
+                              <lightning-progress-bar value={individualInNetworkOutofPocketPercentage}
+                                size="small"></lightning-progress-bar>
+                              <template if:true={individualInNetworkOutofPocketApplied}>
+                                <lightning-progress-bar value={individualInNetworkOutofPocketPercentage}
+                                  size="small"></lightning-progress-bar>
+                                <p class="slds-text-align_left">${individualInNetworkOutofPocketApplied} of
+                                  ${individualInNetworkOutofPocketLimit} applied</p>
+                              </template>
                             </div>
-                          </div>
-                          <div class="slds-col">
-                            <h2>Out-of-Network Out-of-Pocket</h2>
-                             <lightning-progress-bar value={individualInNetworkOutofPocketPercentage}
-                                    size="small"></lightning-progress-bar>
-                            <div class="slds-grid slds-gutters_none">
-                              <div class="slds-col">
+                            <div class="container slds-m-top_small">
+                              <h2>Out-of-Network Out-of-Pocket</h2>
+                              <lightning-progress-bar value={individualInNetworkOutofPocketPercentage}></lightning-progress-bar>
                                 <template if:true={individualOutofNetworkOutofPocketApplied}>
-                                 
                                   <p class="slds-text-align_left">${individualOutofNetworkOutofPocketApplied} of
                                     ${individualOutofNetworkOutofPocketLimit} applied</p>
                                 </template>
-                              </div>
-                              <div class="slds-col">
-                                <template if:true={individualOutofNetworkOutofPocketRemain}>
-                                  <p class="slds-text-align_right">
-                                    ${individualOutofNetworkOutofPocketRemain} remaining
-                                  </p>
-                                </template>
-                              </div>
                             </div>
                           </div>
-                        </div>
-                        <div class="slds-grid">
-                          <span>FAMILY</span>
-                          <div class="slds-col"></div>
-                          <div class="slds-col"></div>
                         </div>
                       </lightning-accordion-section>
 
@@ -195,8 +174,9 @@
                   </template>
                 </lightning-tab>
                 <lightning-tab label="Coverage Benefit Details">
-                   <label for="request-select" class="slds-form-element__label">Please select a category to view benefit details</label>
-                  <select id="item-request-select" class="slds-select" onchange={handleItemChange} >
+                  <label for="request-select" class="slds-form-element__label">Please select a category to view benefit
+                    details</label>
+                  <select id="item-request-select" class="slds-select" onchange={handleItemChange}>
                     <!--onload={handleLoad} onchange={handleChange} add back later-->
                     <template for:each={coverageBenefitItems} for:item="rec">
                       <option key={rec.Id} value={rec.Id}>
@@ -205,20 +185,14 @@
                     </template>
                   </select>
                   <lightning-accordion allow-multiple-sections-open class="slds-m-top_small"
-                         active-section-name="Coverage Benefit Details">
-                        <lightning-accordion-section name="Coverage Benefit Details" label={selectedItemName} >
-                            <lightning-datatable
-                                  key-field="id"
-                                  columns={columns}
-                                  data={coverageBenefitItemsLimit}
-                                  hide-checkbox-column
-                                  default-sort-direction={defaultSortDirection}
-                                  sorted-direction={sortDirection}
-                                  sorted-by={sortedBy}
-                                  onsort={onHandleSort}>
-                            </lightning-datatable>
-                        </lightning-accordion-section>
-                      </lightning-accordion>
+                    active-section-name="Coverage Benefit Details">
+                    <lightning-accordion-section name="Coverage Benefit Details" label={selectedItemName}>
+                      <lightning-datatable key-field="id" columns={columns} data={coverageBenefitItemsLimit}
+                        hide-checkbox-column default-sort-direction={defaultSortDirection}
+                        sorted-direction={sortDirection} sorted-by={sortedBy} onsort={onHandleSort}>
+                      </lightning-datatable>
+                    </lightning-accordion-section>
+                  </lightning-accordion>
                 </lightning-tab>
               </lightning-tabset>
 

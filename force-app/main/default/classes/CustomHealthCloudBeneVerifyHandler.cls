@@ -8,34 +8,16 @@ public with sharing class CustomHealthCloudBeneVerifyHandler {
      //Decide if I want it global or public later. 
      //Keep the return type just becuase it has a model built already for the comp.
      @AuraEnabled
-     public static List<healthcloudext.BenefitsVerificationResponse> verifyBenefits(List<healthcloudext.BenefitsVerificationRequest> requests) {
+     public static List<healthcloudext.BenefitsVerificationResponse> verifyBenefits(List<MemberPlan> MemberPlans) {
         Account providerAcct;
-        HealthcareProvider providerHcp;
-
         //Captures all reasponses 
         List<healthcloudext.BenefitsVerificationResponse> responses = new List<healthcloudext.BenefitsVerificationResponse>();
-
-        // Prepare DML buffers
-        List<CoverageBenefit> covInsert   = new List<CoverageBenefit>();
-        List<CareBenefitVerifyRequest> toUpdate    = new List<CareBenefitVerifyRequest>();
-        List<CareBenefitVerificationTask__c> taskInsert  = new List<CareBenefitVerificationTask__c>();
-        List<Id> requestMemberIds = new List<Id>();
-
-        for(healthcloudext.BenefitsVerificationRequest initialRequest : requests){
-            requestMemberIds.add(initialRequest.memberAccountId);
-        }
-
-        //Fetch the queue that will own the follow-up task
-        Id queueId = [SELECT Id FROM Group WHERE Type = 'Queue' AND Name = 'Care Benefit Records' LIMIT 1].Id;
 
         //Create Request Model
         BenefitVerificationRequest req = new BenefitVerificationRequest();
 
-        //Assumse only one meember plan
-        List<MemberPlan> memPlans = getMemberPlans(requestMemberIds);
-
         //Process each request
-        for (MemberPlan memPlan : memPlans) {
+        for (MemberPlan memPlan : MemberPlans) {
 
             healthcloudext.BenefitsVerificationResponse hres = new healthcloudext.BenefitsVerificationResponse();
 
@@ -64,7 +46,7 @@ public with sharing class CustomHealthCloudBeneVerifyHandler {
                 httpReq.setBody(req.toJson());
                 
                 HttpResponse httpRes = new Http().send(httpReq);
-                
+            
                 //Handle the response
                 if (httpRes.getStatusCode() == 200) {
                     //parse JSON
@@ -77,6 +59,12 @@ public with sharing class CustomHealthCloudBeneVerifyHandler {
                     hres.jsonResponse = json.serialize(payload);
                     hres.memberNumber = memPlan.MemberNumber;
                     responses.add(hres);
+                    try {
+                         createRelatedRecords(httpRes.getStatusCode(), memPlan);
+                    } catch (Exception ex) {
+                        system.debug( 'Error: ' +  ex.getMessage());
+                    }
+                   
                 
                 } else {
                     //non-200 HTTP
@@ -102,6 +90,117 @@ public with sharing class CustomHealthCloudBeneVerifyHandler {
 
         return responses;
     }
+
+    private static void createRelatedRecords(Integer StatusCode, MemberPlan memPlan){
+        
+        //mock data received fromt the api to generate the related records
+        //Would normally break this up but out of scope for this demo app
+        if(StatusCode == 200){
+            CareBenefitVerifyRequest cbvr = new CareBenefitVerifyRequest();
+            cbvr.PayerId = memPlan.PayerId;
+            cbvr.ProviderId = memPlan.Provider__c;
+            cbvr.RequestDate = Datetime.now();
+            cbvr.Status = 'Completed';
+            cbvr.MemberPlanId = memPlan.Id;
+            cbvr.StatusReason = 'Verified Successfully';
+            cbvr.AssignedToId = UserInfo.getUserId();
+            insert cbvr;
+
+            CoverageBenefit coverageBenefit = new CoverageBenefit();
+            coverageBenefit.Name = 'Coverage Benefit - ' + Datetime.now() + ' - ' + memPlan.MemberNumber;
+            coverageBenefit.BenefitNotes = 'Test Coverage Notes';
+            coverageBenefit.MemberPlanId = memPlan.Id;
+            coverageBenefit.BenefitPeriodEndDate = Date.today().addYears(2);
+            coverageBenefit.BenefitPeriodStartDate = Date.today();
+            coverageBenefit.CareBenefitVerifyRequestId = cbvr.Id;
+            coverageBenefit.CoverageType = 'Pharmacy';
+            coverageBenefit.EmergencyDepartmentCopay = 350;
+            coverageBenefit.FamilyInNetworkDeductibleApplied = 200;
+            coverageBenefit.FamilyInNetworkDeductibleLimit = 2000;
+            coverageBenefit.FamilyInNetworkDeductibleRemaining = 1800;
+            coverageBenefit.FamilyInNetworkOutofPocketApplied = 100;
+            coverageBenefit.FamilyInNetworkOutofPocketLimit = 3000;
+            coverageBenefit.FamilyInNetworkOutofPocketRemaining = 2900;
+            coverageBenefit.FamilyOutofNetworkDeductibleApplied = 300;
+            coverageBenefit.FamilyOutofNetworkDeductibleLimit = 5000;
+            coverageBenefit.FamilyOutofNetworkDeductibleRemaining = 4700;
+            coverageBenefit.FamilyOutofNetworkOutofPocketApplied = 600;
+            coverageBenefit.FamilyOutofNetworkOutofPocketLimit = 1000;
+            coverageBenefit.FamilyOutofNetworkOutofPocketRemaining = 400;
+            coverageBenefit.InNetworkCoinsuranceAmount = 4000;
+            coverageBenefit.InNetworkCoinsurancePercentage = 10;
+            coverageBenefit.InNetworkLifetimeMaximum = 10000;
+            coverageBenefit.IndividualInNetworkDeductibleApplied = 800;
+            coverageBenefit.IndividualInNetworkDeductibleLimit = 10000;
+            coverageBenefit.IndividualInNetworkDeductibleRemaining = 9200;
+            coverageBenefit.IndividualInNetworkOutofPocketApplied = 550;
+            coverageBenefit.IndividualInNetworkOutofPocketLimit = 6000;
+            coverageBenefit.IndividualInNetworkOutofPocketRemaining = 5450;
+            coverageBenefit.IndividualOutofNetworkDeductibleApplied = 700;
+            coverageBenefit.IndividualOutofNetworkDeductibleLimit = 15000;
+            coverageBenefit.IndividualOutofNetworkDeductibleRemain = 14300;
+            coverageBenefit.IndividualOutofNetworkOutofPocketApplied = 250;
+            coverageBenefit.IndividualOutofNetworkOutofPocketLimit = 500;
+            coverageBenefit.IndividualOutofNetworkOutofPocketRemain = 250;
+            coverageBenefit.MemberId = memPlan.MemberId;
+            coverageBenefit.MemberPlanId = memPlan.Id;
+            coverageBenefit.OutofNetworkCoinsuranceAmount = 4000;
+            coverageBenefit.OutofNetworkCoinsurancePercentage = 20;
+            coverageBenefit.OutofNetworkLifetimeMaximum = 30000;
+            coverageBenefit.PharmaCopayAmount = 600;
+            coverageBenefit.PrimaryCareCopay = 4000;
+            coverageBenefit.SpecialistCopay = 8000;
+            coverageBenefit.UrgentCareCopay	 = 7000;
+            coverageBenefit.IsActive = true;
+            insert coverageBenefit;
+
+            cbvr.CoverageBenefitId = coverageBenefit.Id;
+            update cbvr;
+
+            CoverageBenefitItem cbi = new CoverageBenefitItem();
+            cbi.CoverageBenefitId = coverageBenefit.Id;
+            cbi.IsActive = true;
+            cbi.MemberId = memPlan.MemberId;
+            cbi.BenefitCategory = 'General Health';
+            cbi.ServiceType = 'General';
+            cbi.ServiceTypeCode = 'A22';
+            cbi.CoverageLevel = 'Primary';
+            cbi.IsInPlanNetwork = true;
+            cbi.TimePeriod = '1-Year';
+            cbi.Name = 'Test Coverage Benefit Item - ' + Datetime.now();
+            cbi.Notes = 'Test Coverage Benefit Item Notes';
+            cbi.InNetworkCoverage = '1000';
+            cbi.OutofNetworkCoverage = '2000';
+            insert cbi;
+
+            CareLimitType careLimitType = [SELECT Id, DeveloperName, LimitType FROM CareLimitType];
+            CoverageBenefitItemLimit cbil = new CoverageBenefitItemLimit();
+            cbil.CareLimitTypeId = careLimitType.Id;
+            cbil.CoverageBenefitItemId = cbi.Id;
+            cbil.Name = 'Out of Network Limit';
+            cbil.AllowedLimit = '2000';
+            cbil.AppliedLimit = '1000';
+            cbil.NetworkType = 'Out';
+            cbil.CoverageLevel = 'Individual';
+            cbil.TermType = 'Years';
+            cbil.AppliedQuantity = 1000;
+            cbil.AllowedQuantity = 2000;
+            insert cbil;
+
+            Id queueId = [SELECT Id FROM Group WHERE Type = 'Queue' AND Name = 'Care Benefit Records' LIMIT 1].Id;
+            List<CareBenefitVerificationTask__c> tasksToInsert = new List<CareBenefitVerificationTask__c>();
+
+            // create a follow-up task in the queue
+            tasksToInsert.add(new CareBenefitVerificationTask__c(
+                Status__c = 'New',
+                Care_Benefit_Verify_Request__c  = cbvr.Id,
+                OwnerId = queueId
+            ));
+
+            if (!tasksToInsert.isEmpty()) insert tasksToInsert;
+
+        }
+    }
     @AuraEnabled
     public static List<MemberPlan> getMemberPlans(List<Id> requestMemberIds){
         return [
@@ -109,12 +208,16 @@ public with sharing class CustomHealthCloudBeneVerifyHandler {
                 ,   Member.FirstName
                 ,   Member.LastName
                 ,   Member.PersonBirthdate
+                ,   MemberId
                 ,   MemberNumber
                 ,   SubscriberId
                 ,   Policy_Number__c
+                ,   PlanId
                 ,   PayerId
                 ,   Payer.Name
                 ,   Provider__c
+                ,   Provider__r.NPI__c
+                ,   Provider__r.Name
                 ,   Service_Detail__c
                 ,   Service_Detail__r.Service_Type__c
                 ,   Service_Detail__r.Service_Date__c
@@ -183,8 +286,6 @@ public with sharing class CustomHealthCloudBeneVerifyHandler {
 
     @AuraEnabled
     public static List<CoverageBenefitItem> getCoverageBenefitItem(List<Id> CoverageBenefitIds, List<Id> MemberIds){
-        system.debug('Coverage BenefitIds: '+ CoverageBenefitIds);
-        system.debug('MemberIds: '+ MemberIds);
         List<CoverageBenefitItem> cbi = [SELECT Id
             ,   IsActive
             ,   BenefitCategory
@@ -202,7 +303,6 @@ public with sharing class CustomHealthCloudBeneVerifyHandler {
 
     @AuraEnabled
     public static List<CoverageBenefitItemLimit> getCoverageBenefitItemLimit (List<Id> CoverageBenefitItemIds){
-        system.debug('Coverage Benefit Item Limit Id: '+ CoverageBenefitItemIds );
         
         List<CoverageBenefitItemLimit> cbItemLimits = [SELECT 
             Id
@@ -221,7 +321,6 @@ public with sharing class CustomHealthCloudBeneVerifyHandler {
 
     @AuraEnabled
     public static List<CoverageBenefitItem> getPlanLevelBenefits(List<Id> requestMemberIds){
-        System.debug('Request Ids sent from client: ' + requestMemberIds);
        
         return [SELECT 
           Id 
@@ -264,7 +363,7 @@ public with sharing class CustomHealthCloudBeneVerifyHandler {
             WHERE MemberPlanId =: memberPlanIds 
             ORDER BY CreatedDate DESC
         ];
-        system.debug('CBVR Records: ' + cbvRecords.size());
+
         return cbvRecords;
        
     }
