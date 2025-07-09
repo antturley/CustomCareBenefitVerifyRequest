@@ -28,7 +28,9 @@ This project can be deployed by cloning the repo and deploying all metadata toge
 Code & App Walkthroughs
 Take a guided look into the architecture, workflows, and integration design of the Care Benefit Verification App:
 
-Code Walkthrough & Benefit Verification App Walkthrough — Apex logic, LWC, metadata structure, and queue-based task automation 📺 Watch Walkthrough - https://drive.google.com/drive/folders/1CqEd-QyYgie4EljUp7E6tV0AQxIuSDxG?usp=sharing
+Code Walkthrough & Benefit Verification App Walkthrough — Apex logic, LWC, metadata structure, and queue-based task automation
+
+📺 Watch Walkthrough - https://drive.google.com/drive/folders/1CqEd-QyYgie4EljUp7E6tV0AQxIuSDxG?usp=sharing
 
 ---
 
